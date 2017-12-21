@@ -34,6 +34,8 @@
  */
 
 #include "obstacle_detector/obstacle_publisher.h"
+#include "dart_msgs/cone_list.h"
+#include "dart_msgs/colors.h"
 
 using namespace std;
 using namespace obstacle_detector;
@@ -94,10 +96,12 @@ bool ObstaclePublisher::updateParams(std_srvs::Empty::Request& req, std_srvs::Em
   if (p_active_ != prev_active) {
     if (p_active_) {
       obstacle_pub_ = nh_.advertise<obstacle_detector::Obstacles>("obstacles", 10);
+      dart_obstacle_pub = nh_.advertise<dart_msgs::cone_list>("lidar_cones", 10);
       timer_.start();
     }
     else {
       obstacle_pub_.shutdown();
+      dart_obstacle_pub.shutdown();
       timer_.stop();
     }
   }
@@ -224,6 +228,15 @@ void ObstaclePublisher::publishObstacles() {
 
   obstacles_msg->header.stamp = ros::Time::now();
   obstacle_pub_.publish(obstacles_msg);
+  dart_msgs::cone_list cones;
+    for(const obstacle_detector::CircleObstacle& obstacle:obstacles_.circles){
+        dart_msgs::cone cone;
+        cone.position = obstacle.center;
+        cone.type = dart_msgs::colors::unknown;
+        cones.cones.push_back(cone);
+    }
+
+  dart_obstacle_pub.publish(cones);
 }
 
 void ObstaclePublisher::reset() {
